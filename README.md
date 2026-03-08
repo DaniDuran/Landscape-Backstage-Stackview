@@ -1,89 +1,107 @@
 # Landscape-Backstage-Stackview
-Este repositorio levanta Backstage en Docker con autenticación OIDC usando un Keycloak propio incluido en el mismo docker-compose. Permite desplegar un Software Catalog corporativo con registro de frontend, backend, APIs, librerías y microservicios entre otros componentes.
 
-## 1) Requisitos
+Repositorio para ejecutar Backstage en Docker con autenticación OIDC usando un Keycloak propio incluido en el mismo docker-compose. 
+Este proyecto Permite desplegar un Software Catalog corporativo con registro de frontend, backend, APIs, librerías y microservicios entre otros componentes.
 
-- Docker Desktop (con `docker compose`)
-- Git
-- (Opcional) Node.js 20+ si quieres crear/regenerar el proyecto Backstage fuera de Docker
+## 1) Objetivo
 
-## 2) Descarga del proyecto
+Levantar un catalogo de arquitectura/software para registrar y relacionar:
 
-```bash
-git clone <tu-repo>
-cd Backstage
-```
+- Proyectos (`System`)
+- Microservicios/frontends/herramientas (`Component`)
+- APIs (`API`)
+- Librerias (`Component` tipo `library`)
 
-Si necesitas crear el proyecto Backstage desde cero (carpeta `stackview`):
+## 2) Arquitectura del stack
 
-```bash
-npx @backstage/create-app@latest --path stackview
-```
-
-## 3) Imagenes y servicios Docker
-
-`docker-compose.yml` levanta 4 servicios:
+El `docker-compose.yml` levanta estos servicios:
 
 - `postgres`: base de datos de Backstage
 - `keycloak-postgres`: base de datos de Keycloak
-- `keycloak`: servidor de identidad OIDC
-- `backstage`: aplicacion Backstage (modo `production`)
+- `keycloak`: Identity Provider OIDC
+- `backstage`: aplicacion principal
 
-## 4) Configuracion por variables (`.env`)
+Puertos por defecto:
 
-Copiar el ejemplo y ajustar secretos:
+- Backstage: `http://localhost:7007`
+- Keycloak: `http://localhost:8080`
 
-```bash
-cp .env.example .env
+## 3) Requisitos
+
+- Docker Desktop con `docker compose`
+- Git
+- Opcional: Node.js 20+ (si quieres ejecutar Backstage fuera de Docker)
+
+## 4) Estructura relevante
+
+- `docker-compose.yml`: orquestacion de servicios
+- `Dockerfile`: build de Backstage
+- `.env.example`: variables de entorno base
+- `stackview/app-config.production.yaml`: configuracion OIDC/DB en produccion
+- `stackview/examples/org.yaml`: usuarios y grupos ejemplo
+- `stackview/examples/entities.yaml`: sistemas/componentes/librerias ejemplo
+
+## 5) Configuracion inicial
+
+1. Copia variables de entorno:
+
+```powershell
+Copy-Item .env.example .env
 ```
 
-Variables clave:
+2. Ajusta secretos obligatorios en `.env`:
 
-- Backstage:
-  - `BACKSTAGE_PORT=7007`
-  - `BACKEND_SECRET=...`
-  - `AUTH_SESSION_SECRET=...` (obligatoria para OIDC)
-- Postgres Backstage:
-  - `POSTGRES_*`
-- Keycloak:
-  - `KEYCLOAK_ADMIN`, `KEYCLOAK_ADMIN_PASSWORD`
-  - `KEYCLOAK_REALM=Thomas`
-  - `KEYCLOAK_CLIENT_ID=MTI`
-  - `KEYCLOAK_CLIENT_SECRET=stackview-client-secret`
-- OIDC en Backstage:
-  - `OIDC_CLIENT_ID=MTI`
-  - `OIDC_CLIENT_SECRET=stackview-client-secret`
-  - `OIDC_METADATA_URL=http://host.docker.internal:8080/realms/Thomas/.well-known/openid-configuration`
-  - `OIDC_CALLBACK_URL=http://localhost:7007/api/auth/oidc/handler/frame`
+- `BACKEND_SECRET`
+- `AUTH_SESSION_SECRET`
+- `KEYCLOAK_ADMIN_PASSWORD`
+- `KEYCLOAK_CLIENT_SECRET`
+- `KEYCLOAK_DB_PASSWORD`
+- `OIDC_CLIENT_SECRET`
+- `GITHUB_TOKEN` (si usaras integracion GitHub)
 
-## 5) Levantar la plataforma
+3. Asegura consistencia entre `.env` y Keycloak:
+
+- `OIDC_CLIENT_ID` debe coincidir con `KEYCLOAK_CLIENT_ID`
+- `OIDC_CLIENT_SECRET` debe coincidir con el secret del cliente en Keycloak
+- `OIDC_METADATA_URL` debe apuntar al realm correcto
+
+## 6) Levantar ambiente y configurar OIDC
+
+### 6.1 Levantar contenedores
 
 ```bash
 docker compose up -d --build
+docker compose ps
 ```
 
-Accesos:
+Opcional (logs):
 
-- Backstage: http://localhost:7007
-- Keycloak: http://localhost:8080
+```bash
+docker compose logs -f backstage
+docker compose logs -f keycloak
+```
 
-## 6) Crear reino, cliente y usuario en Keycloak (por consola)
+### 6.2 Login administrativo por CLI en Keycloak
 
-### 6.1 Login administrativo en Keycloak CLI
+```bash
+docker exec backstage-keycloak /opt/keycloak/bin/kcadm.sh config credentials --server http://localhost:8080 --realm master --user admin --password <KEYCLOAK_ADMIN_PASSWORD>
+```
+
+Si usas valores por defecto de ejemplo:
 
 ```bash
 docker exec backstage-keycloak /opt/keycloak/bin/kcadm.sh config credentials --server http://localhost:8080 --realm master --user admin --password admin123
 ```
 
-### 6.2 Crear reino `Thomas`
+### 6.3 Crear y validar cliente OIDC (`MTI`) - Detallado
+
+1. Crea el realm (si no existe):
 
 ```bash
 docker exec backstage-keycloak /opt/keycloak/bin/kcadm.sh create realms -s realm=Thomas -s enabled=true
 ```
 
-### 6.3 Crear cliente OIDC `MTI`
-
-Crear archivo temporal `keycloak-client.json`:
+2. Verifica/ajusta el archivo `keycloak-client.json` en la raiz del repo:
 
 ```json
 {
@@ -102,329 +120,209 @@ Crear archivo temporal `keycloak-client.json`:
 }
 ```
 
-Aplicar en Keycloak:
+3. Copia el archivo al contenedor:
 
 ```bash
 docker cp keycloak-client.json backstage-keycloak:/tmp/keycloak-client.json
-docker exec backstage-keycloak /opt/keycloak/bin/kcadm.sh create clients -r Thomas -f /tmp/keycloak-client.json
-rm keycloak-client.json
 ```
 
-### 6.4 Crear usuario `stackviewer`
+4. Autenticarse 
+```bash
+docker exec -it backstage-keycloak /opt/keycloak/bin/kcadm.sh config credentials --server http://localhost:8080 --realm master --user admin --password admin123
+```
+5. Crea el cliente en el realm:
+
+```bash
+docker exec backstage-keycloak /opt/keycloak/bin/kcadm.sh create clients -r Thomas -f /tmp/keycloak-client.json
+```
+
+5. Valida que el cliente exista:
+
+```bash
+docker exec backstage-keycloak /opt/keycloak/bin/kcadm.sh get clients -r Thomas -q clientId=MTI
+```
+
+6. Valida el endpoint OIDC discovery del realm:
+
+```bash
+curl http://localhost:8080/realms/Thomas/.well-known/openid-configuration
+```
+
+7. Verifica coherencia final:
+
+- `clientId` en Keycloak = `OIDC_CLIENT_ID` en `.env`
+- `secret` en Keycloak = `OIDC_CLIENT_SECRET` en `.env`
+- `redirectUris` incluye `http://localhost:7007/api/auth/oidc/handler/frame`
+- `webOrigins` incluye `http://localhost:7007`
+
+### 6.4 Crear usuario de prueba
 
 ```bash
 docker exec backstage-keycloak /opt/keycloak/bin/kcadm.sh create users -r Thomas -s username=stackviewer -s enabled=true -s email=stackviewer@local.dev -s emailVerified=true -s firstName=Stack -s lastName=Viewer
-docker exec backstage-keycloak /opt/keycloak/bin/kcadm.sh set-password -r Thomas --username stackviewer --new-password stackview123 --temporary=false
+docker exec backstage-keycloak /opt/keycloak/bin/kcadm.sh set-password -r Thomas --username stackviewer --new-password stackviewer123 --temporary=false
 ```
 
-## 7) Integracion Backstage-Keycloak
+### 6.5 Probar login en Backstage
 
-La integracion OIDC queda activa en `stackview/app-config.production.yaml` con:
-
-- `auth.session.secret: ${AUTH_SESSION_SECRET}`
-- `auth.providers.oidc.production.*`
-- resolvers de login por email
-
-La UI de Backstage usa el proveedor `oidc` (Keycloak) en la pantalla de login.
-
-## 8) Verificacion rapida
-
-1. Abre http://localhost:7007
-2. Selecciona "Sign in with your Keycloak account"
+1. Abre `http://localhost:7007`
+2. Pulsa `Sign in with your Keycloak account`
 3. Ingresa:
    - Usuario: `stackviewer`
-   - Password: `stackview123`
+   - Password: `stackviewer123`
 
-Validacion tecnica (backend):
+Chequeo tecnico:
 
 ```bash
 curl -I "http://localhost:7007/api/auth/oidc/start?env=production&origin=http://localhost:7007"
 ```
 
-Debe responder `302` (redireccion a Keycloak).
+Debe responder `302`.
 
-## 9) Comandos utiles
+## 7) Crear proyectos, APIs, librerias e interconectarlos
+
+### 7.1 Define equipos duenos (owners)
+
+Edita `stackview/examples/org.yaml` para crear grupos:
+
+```yaml
+apiVersion: backstage.io/v1alpha1
+kind: Group
+metadata:
+  name: team-plataforma
+spec:
+  type: team
+  children: []
+```
+
+### 7.2 Registra entidades de catalogo
+
+Edita `stackview/examples/entities.yaml` agregando entidades con relaciones.
+
+Ejemplo completo:
+
+```yaml
+---
+apiVersion: backstage.io/v1alpha1
+kind: System
+metadata:
+  name: cartera-digital
+  description: Dominio principal de pagos y cartera
+spec:
+  owner: group:default/team-plataforma
+---
+apiVersion: backstage.io/v1alpha1
+kind: API
+metadata:
+  name: orders-api
+  description: API publica de ordenes
+spec:
+  type: openapi
+  lifecycle: production
+  owner: group:default/team-plataforma
+  system: system:default/cartera-digital
+  definition: |
+    openapi: 3.0.3
+    info:
+      title: Orders API
+      version: 1.0.0
+    paths:
+      /orders:
+        get:
+          responses:
+            "200":
+              description: OK
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: ms-orders
+spec:
+  type: service
+  lifecycle: production
+  owner: group:default/team-plataforma
+  system: system:default/cartera-digital
+  providesApis:
+    - api:default/orders-api
+  dependsOn:
+    - component:default/lb-auth
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: lb-auth
+spec:
+  type: library
+  lifecycle: production
+  owner: group:default/team-plataforma
+  system: system:default/cartera-digital
+  subcomponentOf: component:default/ms-orders
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: web-checkout
+spec:
+  type: website
+  lifecycle: production
+  owner: group:default/team-plataforma
+  system: system:default/cartera-digital
+  consumesApis:
+    - api:default/orders-api
+```
+
+### 7.3 Relaciones recomendadas
+
+Usa estos campos para interconectar:
+
+- `system`: agrupa componentes/APIs por proyecto
+- `owner`: asigna responsable (grupo/usuario)
+- `providesApis`: un servicio expone APIs
+- `consumesApis`: un frontend u otro servicio consume APIs
+- `dependsOn`: dependencia tecnica entre componentes
+- `subcomponentOf`: libreria/modulo parte de otro componente
+
+### 7.4 Refrescar catalogo
+
+Despues de editar archivos locales:
+
+```bash
+docker compose restart backstage
+```
+
+En UI:
+
+1. Ir a `Catalog`
+2. Abrir una entidad
+3. Revisar `Relations` para confirmar enlaces
+
+## 8) Comandos utiles
 
 ```bash
 docker compose ps
 docker compose logs -f backstage
 docker compose logs -f keycloak
+docker compose restart backstage
 docker compose down
 docker compose down -v
 ```
 
-## 10) Troubleshooting
+## 9) Troubleshooting
 
 - Error `Authentication failed, authentication requires session support`:
   - Verifica `AUTH_SESSION_SECRET` en `.env`
   - Verifica `auth.session.secret` en `stackview/app-config.production.yaml`
-  - Rebuild: `docker compose up -d --build backstage`
+  - Reconstruye backend: `docker compose up -d --build backstage`
 
-- Error de conexion OIDC (`ECONNREFUSED`):
-  - Verifica `OIDC_METADATA_URL` (para navegador local usar `host.docker.internal`)
+- Error OIDC `ECONNREFUSED`:
+  - Verifica `OIDC_METADATA_URL`
   - Verifica que `keycloak` este `Up` en `docker compose ps`
 
-- Error `DNS_PROBE_FINISHED_NXDOMAIN` con host `keycloak`:
-  - No uses `keycloak` en URLs del navegador, ese host solo existe dentro de Docker.
-  - Usa `OIDC_METADATA_URL=http://host.docker.internal:8080/realms/Thomas/.well-known/openid-configuration`.
-
-## 11) Recomendaciones para produccion
-
-- Cambiar todos los secretos por valores fuertes.
-- No usar `start-dev` de Keycloak en ambientes productivos reales.
-- Agregar backup de volumenes de Postgres (`postgres_data`).
-
-
-# Backstage Setup con Docker
-
-Guía paso a paso para crear y ejecutar **Backstage** usando **Docker** y **PostgreSQL**.
-
----
-
-# 1. Prerequisitos
-
-Instalar las siguientes herramientas:
-
-* **Node.js** (versión 18 o superior)
-* **Yarn**
-* **Docker**
-
-Verificar instalación:
-
-```bash
-node -v
-yarn -v
-docker -v
-```
-
----
-
-# 2. Crear el proyecto Backstage
-
-Ubicarse en el directorio de trabajo:
-
-```bash
-cd C:\WorkSpace\Arquitectura
-```
-
-Crear el proyecto:
-
-```bash
-npx @backstage/create-app@latest
-```
-
-Responder al prompt:
-
-```
-app name? backstage
-```
-
-Se generará la estructura del proyecto:
-
-```
-backstage
-│
-├── app-config.yaml
-├── package.json
-├── yarn.lock
-├── packages
-│   ├── app
-│   └── backend
-└── plugins
-```
-
----
-
-# 3. Probar Backstage localmente
-
-Entrar al proyecto:
-
-```bash
-cd backstage
-```
-
-Instalar dependencias:
-
-```bash
-yarn install
-```
-
-Ejecutar en modo desarrollo:
-
-```bash
-yarn dev
-```
-
-Abrir en navegador:
-
-```
-http://localhost:3000
-```
-
-Si aparece la interfaz de Backstage, la instalación es correcta.
-
----
-
-# 4. Crear Dockerfile
-
-En la raíz del proyecto crear el archivo:
-
-```
-Dockerfile
-```
-
-Contenido:
-
-```dockerfile
-FROM node:18-bullseye-slim
-
-WORKDIR /app
-
-COPY package.json yarn.lock ./
-
-RUN yarn install --frozen-lockfile
-
-COPY . .
-
-RUN yarn build
-
-ENV NODE_ENV=production
-
-EXPOSE 7007
-
-CMD ["yarn", "start"]
-```
-
----
-
-# 5. Crear docker-compose
-
-Crear archivo:
-
-```
-docker-compose.yml
-```
-
-Contenido:
-
-```yaml
-version: "3.8"
-
-services:
-
-  postgres:
-    image: postgres:17
-    environment:
-      POSTGRES_USER: backstage
-      POSTGRES_PASSWORD: backstage
-      POSTGRES_DB: backstage
-    ports:
-      - "5432:5432"
-
-  backstage:
-    build: .
-    ports:
-      - "7007:7007"
-    depends_on:
-      - postgres
-    environment:
-      POSTGRES_HOST: postgres
-      POSTGRES_PORT: 5432
-      POSTGRES_USER: backstage
-      POSTGRES_PASSWORD: backstage
-      POSTGRES_DB: backstage
-```
-
----
-
-# 6. Configurar conexión a base de datos
-
-Editar el archivo:
-
-```
-app-config.yaml
-```
-
-Agregar configuración:
-
-```yaml
-backend:
-  database:
-    client: pg
-    connection:
-      host: ${POSTGRES_HOST}
-      port: ${POSTGRES_PORT}
-      user: ${POSTGRES_USER}
-      password: ${POSTGRES_PASSWORD}
-      database: ${POSTGRES_DB}
-```
-
----
-
-# 7. Construir contenedores
-
-Desde la raíz del proyecto ejecutar:
-
-```bash
-docker compose build
-```
-
----
-
-# 8. Ejecutar la aplicación
-
-```bash
-docker compose up
-```
-
----
-
-# 9. Acceder a Backstage
-
-Abrir en navegador:
-
-```
-http://localhost:7007
-```
-
----
-
-# 10. Verificar contenedores en ejecución
-
-```bash
-docker ps
-```
-
-Deberían aparecer:
-
-```
-backstage
-postgres
-```
-
----
-
-# Arquitectura resultante
-
-```
-Docker
-   │
-   ├── Backstage
-   │      └── Software Catalog
-   │
-   └── PostgreSQL
-```
-
-Este entorno permite registrar:
-
-* Frontend
-* Backend
-* APIs
-* Librerías
-* Microservicios
-* Dependencias
-* Equipos responsables
-* Documentación técnica
-
----
-
+- Error DNS con host `keycloak` desde navegador:
+  - `keycloak` solo existe dentro de la red Docker
+  - Para navegador local usa `localhost` o `host.docker.internal`
+
+## 10) Seguridad para entornos reales
+
+- Cambia todos los secretos por valores robustos
+- No uses `start-dev` de Keycloak en produccion real
+- Implementa backup para volumenes `postgres_data` y `keycloak_postgres_data`
