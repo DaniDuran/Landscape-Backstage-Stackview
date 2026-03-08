@@ -326,3 +326,45 @@ docker compose down -v
 - Cambia todos los secretos por valores robustos
 - No uses `start-dev` de Keycloak en produccion real
 - Implementa backup para volumenes `postgres_data` y `keycloak_postgres_data`
+
+## 11) Ajustes de estabilizacion OIDC (2026-03-08)
+
+Cambios aplicados en configuracion:
+
+- `docker-compose.yml`:
+  - `keycloak` ahora tiene healthcheck valido sin `curl`:
+    - `bash -c 'echo > /dev/tcp/127.0.0.1/8080'`
+  - `backstage` ahora depende de `keycloak` con `condition: service_healthy`
+  - `KC_HOSTNAME` se toma desde variable de entorno (`KEYCLOAK_HOSTNAME`)
+- `.env` y `.env.example`:
+  - se agrega `KEYCLOAK_HOSTNAME=host.docker.internal`
+  - se deja `OIDC_METADATA_URL` interno por red Docker:
+    - `http://keycloak:8080/realms/Thomas/.well-known/openid-configuration`
+
+Comandos para levantar/estabilizar:
+
+```bash
+docker compose up -d --build
+docker compose ps
+docker compose logs -f keycloak
+docker compose logs -f backstage
+```
+
+Validaciones de autenticacion:
+
+```bash
+curl -I "http://localhost:7007/api/auth/oidc/start?env=production&origin=http://localhost:7007"
+```
+
+Resultado esperado:
+
+- HTTP `302`
+- redireccion al IdP en `http://host.docker.internal:8080/...`
+- `keycloak` en estado `healthy` en `docker compose ps`
+
+Recuperacion rapida si aparece error de autenticacion tras cambios de entorno:
+
+```bash
+docker compose restart keycloak
+docker compose restart backstage
+```
