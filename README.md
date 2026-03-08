@@ -336,10 +336,18 @@ Cambios aplicados en configuracion:
     - `bash -c 'echo > /dev/tcp/127.0.0.1/8080'`
   - `backstage` ahora depende de `keycloak` con `condition: service_healthy`
   - `KC_HOSTNAME` se toma desde variable de entorno (`KEYCLOAK_HOSTNAME`)
+  - `KC_HOSTNAME_BACKCHANNEL_DYNAMIC` se toma desde `KEYCLOAK_HOSTNAME_BACKCHANNEL_DYNAMIC`
 - `.env` y `.env.example`:
-  - se agrega `KEYCLOAK_HOSTNAME=host.docker.internal`
+  - `KEYCLOAK_HOSTNAME=http://localhost:8080`
+  - `KEYCLOAK_HOSTNAME_BACKCHANNEL_DYNAMIC=true`
   - se deja `OIDC_METADATA_URL` interno por red Docker:
     - `http://keycloak:8080/realms/Thomas/.well-known/openid-configuration`
+
+Motivo del ajuste:
+
+- El navegador local no siempre resuelve `host.docker.internal`.
+- Con `KEYCLOAK_HOSTNAME=http://localhost:8080`, el `authorization_endpoint` queda accesible desde host.
+- Con `KEYCLOAK_HOSTNAME_BACKCHANNEL_DYNAMIC=true`, Backstage dentro de Docker consume endpoints de backchannel internos (`keycloak:8080`) para token/userinfo.
 
 Comandos para levantar/estabilizar:
 
@@ -359,7 +367,7 @@ curl -I "http://localhost:7007/api/auth/oidc/start?env=production&origin=http://
 Resultado esperado:
 
 - HTTP `302`
-- redireccion al IdP en `http://host.docker.internal:8080/...`
+- redireccion al IdP en `http://localhost:8080/...`
 - `keycloak` en estado `healthy` en `docker compose ps`
 
 Recuperacion rapida si aparece error de autenticacion tras cambios de entorno:
