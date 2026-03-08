@@ -1,0 +1,55 @@
+import * as _backstage_plugin_auth_node from '@backstage/plugin-auth-node';
+import { PassportOAuthAuthenticatorHelper } from '@backstage/plugin-auth-node';
+import * as openid_client from 'openid-client';
+import { Strategy, TokenSet, UserinfoResponse } from 'openid-client';
+import * as _backstage_backend_plugin_api from '@backstage/backend-plugin-api';
+
+/**
+ * authentication result for the OIDC which includes the token set and user
+ * profile response
+ * @public
+ */
+type OidcAuthResult = {
+    tokenset: TokenSet;
+    userinfo: UserinfoResponse;
+};
+/** @public */
+declare const oidcAuthenticator: _backstage_plugin_auth_node.OAuthAuthenticator<{
+    initializedPrompt: string | undefined;
+    promise: Promise<{
+        helper: PassportOAuthAuthenticatorHelper;
+        client: openid_client.BaseClient;
+        strategy: Strategy<OidcAuthResult, openid_client.BaseClient>;
+    }>;
+    searchParams: Record<string, string>;
+}, OidcAuthResult>;
+
+/** @public */
+declare const authModuleOidcProvider: _backstage_backend_plugin_api.BackendFeature;
+
+/**
+ * Available sign-in resolvers for the Oidc auth provider.
+ *
+ * @public
+ */
+declare namespace oidcSignInResolvers {
+    /**
+     * A oidc resolver that looks up the user using the local part of
+     * their email address as the entity name.
+     */
+    const emailLocalPartMatchingUserEntityName: _backstage_plugin_auth_node.SignInResolverFactory<unknown, {
+        allowedDomains?: string[] | undefined;
+        dangerouslyAllowSignInWithoutUserInCatalog?: boolean | undefined;
+    } | undefined>;
+    /**
+     * A oidc resolver that looks up the user using their email address
+     * as email of the entity.
+     */
+    const emailMatchingUserEntityProfileEmail: _backstage_plugin_auth_node.SignInResolverFactory<unknown, {
+        allowedDomains?: string[] | undefined;
+        dangerouslyAllowSignInWithoutUserInCatalog?: boolean | undefined;
+    } | undefined>;
+}
+
+export { authModuleOidcProvider as default, oidcAuthenticator, oidcSignInResolvers };
+export type { OidcAuthResult };

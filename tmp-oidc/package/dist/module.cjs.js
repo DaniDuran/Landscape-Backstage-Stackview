@@ -1,0 +1,32 @@
+'use strict';
+
+var backendPluginApi = require('@backstage/backend-plugin-api');
+var pluginAuthNode = require('@backstage/plugin-auth-node');
+var authenticator = require('./authenticator.cjs.js');
+var resolvers = require('./resolvers.cjs.js');
+
+const authModuleOidcProvider = backendPluginApi.createBackendModule({
+  pluginId: "auth",
+  moduleId: "oidc-provider",
+  register(reg) {
+    reg.registerInit({
+      deps: {
+        providers: pluginAuthNode.authProvidersExtensionPoint
+      },
+      async init({ providers }) {
+        providers.registerProvider({
+          providerId: "oidc",
+          factory: pluginAuthNode.createOAuthProviderFactory({
+            authenticator: authenticator.oidcAuthenticator,
+            signInResolverFactories: {
+              ...resolvers.oidcSignInResolvers
+            }
+          })
+        });
+      }
+    });
+  }
+});
+
+exports.authModuleOidcProvider = authModuleOidcProvider;
+//# sourceMappingURL=module.cjs.js.map

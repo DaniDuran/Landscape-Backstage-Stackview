@@ -1,0 +1,52 @@
+---
+# https://backstage.io/docs/features/software-catalog/descriptor-format#kind-user
+apiVersion: backstage.io/v1alpha1
+kind: User
+metadata:
+  name: guest
+spec:
+  memberOf: [guests]
+---
+# Admin user for local/production-mode guest sign-in.
+apiVersion: backstage.io/v1alpha1
+kind: User
+metadata:
+  name: admin
+spec:
+  profile:
+    displayName: Admin User
+    email: admin@local.backstage
+  memberOf: [admins]
+---
+# https://backstage.io/docs/features/software-catalog/descriptor-format#kind-group
+apiVersion: backstage.io/v1alpha1
+kind: Group
+metadata:
+  name: guests
+spec:
+  type: team
+  children: []
+---
+apiVersion: backstage.io/v1alpha1
+kind: Group
+metadata:
+  name: admins
+spec:
+  type: team
+  children: []
+---
+apiVersion: backstage.io/v1alpha1
+kind: Group
+metadata:
+  name: team-venta
+spec:
+  type: team
+  children: []
+---
+apiVersion: backstage.io/v1alpha1
+kind: Group
+metadata:
+  name: team-divicon
+spec:
+  type: team
+  children: []

@@ -1,0 +1,119 @@
+---
+apiVersion: backstage.io/v1alpha1
+kind: System
+metadata:
+  name: venta-cartera
+  description: Proyecto Venta Cartera
+spec:
+  owner: group:default/team-venta
+---
+apiVersion: backstage.io/v1alpha1
+kind: System
+metadata:
+  name: divicon
+  description: Proyecto Divicon
+spec:
+  owner: group:default/team-divicon
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: spa-venta-cartera
+spec:
+  type: website
+  lifecycle: production
+  owner: group:default/team-venta
+  system: system:default/venta-cartera
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: storybook-venta-cartera
+spec:
+  type: tool
+  lifecycle: production
+  owner: group:default/team-venta
+  system: system:default/venta-cartera
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: keycloak-venta-cartera
+spec:
+  type: tool
+  lifecycle: production
+  owner: group:default/team-venta
+  system: system:default/venta-cartera
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: bonita-venta-cartera
+spec:
+  type: tool
+  lifecycle: production
+  owner: group:default/team-venta
+  system: system:default/venta-cartera
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: ms-image-process
+spec:
+  type: service
+  lifecycle: production
+  owner: group:default/team-divicon
+  system: system:default/divicon
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: rabbit-divicon
+spec:
+  type: tool
+  lifecycle: production
+  owner: group:default/team-divicon
+  system: system:default/divicon
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: keycloak-divicon
+spec:
+  type: tool
+  lifecycle: production
+  owner: group:default/team-divicon
+  system: system:default/divicon
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: lb-app-settings
+spec:
+  type: library
+  lifecycle: production
+  owner: group:default/team-divicon
+  system: system:default/divicon
+  subcomponentOf: component:default/ms-image-process
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: lb-keycloak
+spec:
+  type: library
+  lifecycle: production
+  owner: group:default/team-divicon
+  system: system:default/divicon
+  subcomponentOf: component:default/ms-image-process
+---
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: lb-queue-services
+spec:
+  type: library
+  lifecycle: production
+  owner: group:default/team-divicon
+  system: system:default/divicon
+  subcomponentOf: component:default/ms-image-process

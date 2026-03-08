@@ -1,0 +1,95 @@
+services:
+  postgres:
+    image: postgres:${POSTGRES_IMAGE_TAG}
+    container_name: ${POSTGRES_CONTAINER_NAME}
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "${POSTGRES_PORT}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  keycloak-postgres:
+    image: postgres:${KEYCLOAK_DB_IMAGE_TAG}
+    container_name: ${KEYCLOAK_DB_CONTAINER_NAME}
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${KEYCLOAK_DB_USER}
+      POSTGRES_PASSWORD: ${KEYCLOAK_DB_PASSWORD}
+      POSTGRES_DB: ${KEYCLOAK_DB_NAME}
+    ports:
+      - "${KEYCLOAK_DB_PORT}:5432"
+    volumes:
+      - keycloak_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        ['CMD-SHELL', 'pg_isready -U ${KEYCLOAK_DB_USER} -d ${KEYCLOAK_DB_NAME}']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:${KEYCLOAK_IMAGE_TAG}
+    container_name: ${KEYCLOAK_CONTAINER_NAME}
+    restart: unless-stopped
+    depends_on:
+      keycloak-postgres:
+        condition: service_healthy
+    command: start-dev --http-port=8080 --hostname-strict=false
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD}
+      KC_DB: postgres
+      KC_DB_URL_HOST: keycloak-postgres
+      KC_DB_URL_PORT: 5432
+      KC_DB_URL_DATABASE: ${KEYCLOAK_DB_NAME}
+      KC_DB_USERNAME: ${KEYCLOAK_DB_USER}
+      KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD}
+      KC_HEALTH_ENABLED: 'true'
+    ports:
+      - "${KEYCLOAK_PORT}:8080"
+
+  backstage:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ${BACKSTAGE_CONTAINER_NAME}
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      keycloak:
+        condition: service_started
+    environment:
+      NODE_ENV: ${NODE_ENV}
+      APP_TITLE: ${APP_TITLE}
+      ORG_NAME: ${ORG_NAME}
+      APP_BASE_URL: ${APP_BASE_URL}
+      BACKEND_BASE_URL: ${BACKEND_BASE_URL}
+      BACKEND_LISTEN: ${BACKEND_LISTEN}
+      BACKEND_SECRET: ${BACKEND_SECRET}
+      AUTH_SESSION_SECRET: ${AUTH_SESSION_SECRET}
+      POSTGRES_HOST: ${POSTGRES_HOST}
+      POSTGRES_PORT: ${POSTGRES_PORT}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+      GITHUB_TOKEN: ${GITHUB_TOKEN}
+      OIDC_CLIENT_ID: ${OIDC_CLIENT_ID}
+      OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET}
+      OIDC_METADATA_URL: ${OIDC_METADATA_URL}
+      OIDC_CALLBACK_URL: ${OIDC_CALLBACK_URL}
+    ports:
+      - "${BACKSTAGE_PORT}:7007"
+
+volumes:
+  postgres_data:
+  keycloak_postgres_data:

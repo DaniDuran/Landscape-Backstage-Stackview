@@ -1,0 +1,7 @@
+node_modules
+stackview/.git
+stackview/node_modules
+stackview/.yarn/cache
+stackview/.yarn/install-state.gz
+stackview/dist-types
+stackview/packages/*/node_modules
