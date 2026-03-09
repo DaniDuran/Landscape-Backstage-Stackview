@@ -1,0 +1,9 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: drools
+spec:
+  type: tool
+  lifecycle: production
+  owner: architecture-team
+  system: tools
