@@ -14,6 +14,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
   && rm -rf /var/lib/apt/lists/*
 
 COPY stackview/ ./
+COPY catalog/ ./catalog/
 
 RUN rm -rf node_modules packages/*/node_modules
 RUN corepack enable

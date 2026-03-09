@@ -49,40 +49,44 @@ catalog:
     entityFilename: catalog-info.yaml
     pullRequestBranchName: backstage-integration
 
+  # Keep dynamic catalog registration enabled for /catalog-import.
+  readonly: false
+
   rules:
     - allow: [Component, System, API, Resource, Location, Domain, User, Group, Template]
 
   locations:
-
-    # --- TU CATALOGO ---
+    # --- ROOT CATALOG (repo /catalog) ---
     - type: file
-      target: ../../catalog/domains/*.yaml
-
+      target: ../../../catalog/organization/*.yaml
+      rules:
+        - allow: [User, Group]
     - type: file
-      target: ../../catalog/systems/*.yaml
-
+      target: ../../../catalog/domains/*.yaml
+      rules:
+        - allow: [Domain]
     - type: file
-      target: ../../catalog/tools/*.yaml
-
+      target: ../../../catalog/systems/*.yaml
+      rules:
+        - allow: [System]
     - type: file
-      target: ../../catalog/libraries/*.yaml
-
+      target: ../../../catalog/tools/*.yaml
+      rules:
+        - allow: [Component]
     - type: file
-      target: ../../catalog/services/*.yaml
-
-    # --- EJEMPLOS BACKSTAGE ---
+      target: ../../../catalog/libraries/*.yaml
+      rules:
+        - allow: [Component]
     - type: file
-      target: ../../examples/entities.yaml
+      target: ../../../catalog/services/*.yaml
+      rules:
+        - allow: [Component]
 
+    # Keep the default example template available for /create.
     - type: file
       target: ../../examples/template/template.yaml
       rules:
         - allow: [Template]
-
-    - type: file
-      target: ../../examples/org.yaml
-      rules:
-        - allow: [User, Group]
 
 kubernetes: {}
 

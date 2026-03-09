@@ -98,6 +98,8 @@ services:
       OIDC_CLIENT_SECRET: ${OIDC_CLIENT_SECRET}
       OIDC_METADATA_URL: ${OIDC_METADATA_URL}
       OIDC_CALLBACK_URL: ${OIDC_CALLBACK_URL}
+    volumes:
+      - ./catalog:/app/catalog
     ports:
       - "${BACKSTAGE_PORT}:7007"
 

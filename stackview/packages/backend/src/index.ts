@@ -56,8 +56,8 @@ backend.add(import('@backstage/plugin-search-backend-module-pg'));
 backend.add(import('@backstage/plugin-search-backend-module-catalog'));
 backend.add(import('@backstage/plugin-search-backend-module-techdocs'));
 
-// kubernetes plugin
-backend.add(import('@backstage/plugin-kubernetes-backend'));
+// kubernetes plugin intentionally disabled for this stack setup.
+// It requires explicit clusterLocatorMethods config and is not needed for catalog auth flow.
 
 // notifications and signals plugins
 backend.add(import('@backstage/plugin-notifications-backend'));
