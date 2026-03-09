@@ -1,0 +1,7 @@
+apiVersion: backstage.io/v1alpha1
+kind: Domain
+metadata:
+  name: Thomas MTI
+  description: MTI software domain
+spec:
+  owner: architecture-team

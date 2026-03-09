@@ -1,0 +1,8 @@
+apiVersion: backstage.io/v1alpha1
+kind: System
+metadata:
+  name: divicon
+  description: Divicon platform
+spec:
+  owner: architecture-team
+  domain: Thomas MTI

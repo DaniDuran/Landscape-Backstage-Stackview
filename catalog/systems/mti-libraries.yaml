@@ -1,0 +1,8 @@
+apiVersion: backstage.io/v1alpha1
+kind: System
+metadata:
+  name: mti-libraries
+  description: Shared libraries for MTI
+spec:
+  owner: architecture-team
+  domain: Thomas MTI

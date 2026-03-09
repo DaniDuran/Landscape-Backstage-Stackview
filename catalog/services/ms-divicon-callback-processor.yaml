@@ -1,0 +1,14 @@
+apiVersion: backstage.io/v1alpha1
+kind: Component
+metadata:
+  name: ms-divicon-callback-processor
+spec:
+  type: service
+  lifecycle: production
+  owner: divicon-team
+  system: divicon
+  dependsOn:
+    - component:drools
+    - component:lb-app-settings
+    - component:lb-keycloak-auth-lib
+    - component:lb-queue-services
