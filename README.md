@@ -162,7 +162,92 @@ docker exec backstage-keycloak /opt/keycloak/bin/kcadm.sh create users -r Thomas
 docker exec backstage-keycloak /opt/keycloak/bin/kcadm.sh set-password -r Thomas --username stackviewer --new-password stackviewer123 --temporary=false
 ```
 
-### 6.5 Probar login en Backstage
+### 6.5 Crear mapper
+
+Autenticarse en caso de ser necesario
+```bash
+/opt/keycloak/bin/kcadm.sh config credentials --server http://localhost:8080 --realm master --user admin --password admin123
+```
+Obtener el ID del cliente MTI, el mapper necesita el UUID del cliente, no el nombre.
+```bash
+/opt/keycloak/bin/kcadm.sh get clients -r Thomas -q clientId=MTI
+```
+
+Resultado esperado
+```bash
+[ {
+  "id" : "bce21228-e0ed-44ab-a408-4c1572efc187",
+  "clientId" : "MTI",
+  "surrogateAuthRequired" : false,
+  "enabled" : true,
+  "alwaysDisplayInConsole" : false,
+  "clientAuthenticatorType" : "client-secret",
+  "secret" : "stackview-client-secret",
+  "redirectUris" : [ "http://localhost:7007/api/auth/oidc/handler/frame" ],
+  "webOrigins" : [ "http://localhost:7007" ],
+  "notBefore" : 0,
+  "bearerOnly" : false,
+  "consentRequired" : false,
+  "standardFlowEnabled" : true,
+  "implicitFlowEnabled" : false,
+  "directAccessGrantsEnabled" : true,
+  "serviceAccountsEnabled" : false,
+  "publicClient" : false,
+  "frontchannelLogout" : false,
+  "protocol" : "openid-connect",
+  "attributes" : {
+    "realm_client" : "false",
+    "backchannel.logout.session.required" : "true",
+    "post.logout.redirect.uris" : "http://localhost:7007/*",
+    "backchannel.logout.revoke.offline.tokens" : "false"
+  },
+  "authenticationFlowBindingOverrides" : { },
+  "fullScopeAllowed" : true,
+  "nodeReRegistrationTimeout" : -1,
+  "defaultClientScopes" : [ "web-origins", "acr", "roles", "profile", "basic", "email" ],
+  "optionalClientScopes" : [ "address", "phone", "offline_access", "organization", "microprofile-jwt" ],
+  "access" : {
+    "view" : true,
+    "configure" : true,
+    "manage" : true
+  }
+} ]
+```
+Guarda el id.
+
+Crear el mapper de grupos
+```bash
+/opt/keycloak/bin/kcadm.sh create clients/bce21228-e0ed-44ab-a408-4c1572efc187/protocol-mappers/models -r Thomas -s name=groups -s protocol=openid-connect -s protocolMapper=oidc-group-membership-mapper -s 'config."claim.name"=groups' -s 'config."full.path"=false' -s 'config."id.token.claim"=true' -s 'config."access.token.claim"=true' -s 'config."userinfo.token.claim"=true'
+```
+
+Crear grupos
+```bash
+/opt/keycloak/bin/kcadm.sh create groups -r Thomas -s name=viewers
+```
+
+```bash
+/opt/keycloak/bin/kcadm.sh create groups -r Thomas -s name=editors
+```
+
+Crear roles
+```bash
+/opt/keycloak/bin/kcadm.sh create roles -r Thomas -s name=viewers
+```
+```bash
+/opt/keycloak/bin/kcadm.sh create roles -r Thomas -s name=editors
+```
+
+ejecutar script
+```bash 
+docker exec -it backstage-keycloak bash
+```
+
+```bash 
+chmod +x init-keycloak.sh
+./init-keycloak.sh
+```
+
+### 6.7 Probar login en Backstage
 
 1. Abre `http://localhost:7007`
 2. Pulsa `Sign in with your Keycloak account`
