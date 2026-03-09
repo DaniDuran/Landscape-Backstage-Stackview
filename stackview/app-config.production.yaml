@@ -45,11 +45,14 @@ auth:
         callbackUrl: ${OIDC_CALLBACK_URL}
         prompt: auto
         signIn:
+          # Keep only resolvers exported by the Backstage OIDC auth module.
           resolvers:
             - resolver: emailLocalPartMatchingUserEntityName
               dangerouslyAllowSignInWithoutUserInCatalog: true
             - resolver: emailMatchingUserEntityProfileEmail
               dangerouslyAllowSignInWithoutUserInCatalog: true
+        groupsClaim: groups
+        roleClaim: realm_access.roles
 
 catalog:
   # Overrides the default list locations from app-config.yaml as these contain example data.
